@@ -139,6 +139,7 @@
               ref="fileInput"
               @change="handleFileChange" 
               accept=".xlsx,.csv"
+              :key="fileInputKey"
             />
           </div>
           <div class="template-download">
@@ -192,7 +193,8 @@ export default {
       editingApplication: null,
       currentUser: null,
       selectedFile: null,
-      uploadedFileName: ''
+      uploadedFileName: '',
+      fileInputKey: Date.now()
     };
   },
   created() {
@@ -361,9 +363,7 @@ export default {
       this.showBatchImportForm = false;
       this.selectedFile = null;
       this.uploadedFileName = '';
-      if (this.$refs.fileInput) {
-        this.$refs.fileInput.value = '';
-      }
+      this.fileInputKey = Date.now(); // Changing the key will reset the input
     },
     async downloadTemplate() {
       try {
