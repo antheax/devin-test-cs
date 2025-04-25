@@ -1,6 +1,7 @@
 <template>
   <div class="application-records container">
     <h1>申请记录</h1>
+    <p class="slogan">高效管理，轻松申请</p>
     
     <div class="filters">
       <div class="month-filter">
@@ -323,5 +324,13 @@ export default {
   text-align: center;
   padding: 20px;
   color: #909399;
+}
+
+.slogan {
+  text-align: center;
+  margin-top: -10px;
+  margin-bottom: 20px;
+  color: #909399;
+  font-size: 14px;
 }
 </style>
