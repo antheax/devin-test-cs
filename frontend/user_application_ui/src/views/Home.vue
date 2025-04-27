@@ -1,7 +1,7 @@
 <template>
   <div class="home container">
-    <h1>用户申请记录系统</h1>
-    <p>欢迎使用用户申请记录系统，您可以管理用户信息和查看申请记录。</p>
+    <h1>用户账号申请管理</h1>
+    <p>欢迎使用用户账号申请管理，您可以管理用户信息和查看申请记录。</p>
     <div class="features">
       <div class="feature">
         <h3>用户管理</h3>
