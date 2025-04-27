@@ -11,6 +11,18 @@
           </option>
         </select>
       </div>
+      
+      <!-- New project filter -->
+      <div class="project-filter">
+        <label>按项目筛选：</label>
+        <select v-model="selectedProject" @change="fetchApplications">
+          <option value="">全部项目</option>
+          <option v-for="project in projects" :key="project" :value="project">
+            {{ project }}
+          </option>
+        </select>
+      </div>
+      
       <div class="actions">
         <button class="btn btn-primary" @click="showAddApplicationForm = true">新建申请</button>
       </div>
@@ -21,6 +33,7 @@
         <tr>
           <th>申请日期</th>
           <th>用户</th>
+          <th>项目</th>  <!-- New column -->
           <th>目标产品</th>
           <th>申请状态</th>
           <th>操作</th>
@@ -30,6 +43,7 @@
         <tr v-for="application in applications" :key="application.id">
           <td>{{ formatDate(application.application_date) }}</td>
           <td>{{ application.user_name }}</td>
+          <td>{{ application.project }}</td>  <!-- Display project -->
           <td>{{ application.target_product }}</td>
           <td>
             <span :class="['status', application.status === '已完成' ? 'completed' : 'pending']">
@@ -137,7 +151,9 @@ export default {
       applications: [],
       users: [],
       selectedMonth: this.getCurrentMonth(),
+      selectedProject: "", // New property for project filter
       months: this.generateMonths(),
+      projects: [], // List to store unique projects
       showAddApplicationForm: false,
       showEditApplicationForm: false,
       newApplication: {
@@ -154,6 +170,7 @@ export default {
     this.fetchCurrentUser();
     this.fetchApplications();
     this.fetchUsers();
+    this.fetchProjects(); // Add this line
   },
   methods: {
     async fetchCurrentUser() {
@@ -166,14 +183,33 @@ export default {
     },
     async fetchApplications() {
       try {
-        const response = await axios.get(`http://localhost:8000/applications?month=${this.selectedMonth}`, {
+        const response = await axios.get(
+          `http://localhost:8000/applications?month=${this.selectedMonth}${
+            this.selectedProject ? `&project=${this.selectedProject}` : ''
+          }`, 
+          {
+            headers: {
+              'user-id': this.currentUser ? this.currentUser.id : undefined
+            }
+          }
+        );
+        this.applications = response.data;
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+      }
+    },
+    
+    async fetchProjects() {
+      try {
+        const response = await axios.get('http://localhost:8000/users', {
           headers: {
             'user-id': this.currentUser ? this.currentUser.id : undefined
           }
         });
-        this.applications = response.data;
+        // Extract unique projects from users
+        this.projects = [...new Set(response.data.map(user => user.project))];
       } catch (error) {
-        console.error('Error fetching applications:', error);
+        console.error('Error fetching projects:', error);
       }
     },
     async fetchUsers() {
@@ -287,16 +323,17 @@ export default {
   justify-content: flex-end;
 }
 
-.month-filter {
+.month-filter, .project-filter {
   display: flex;
   align-items: center;
+  margin-right: 15px;
 }
 
-.month-filter label {
+.month-filter label, .project-filter label {
   margin-right: 10px;
 }
 
-.month-filter select {
+.month-filter select, .project-filter select {
   padding: 8px;
   border-radius: 4px;
   border: 1px solid #ddd;

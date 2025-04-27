@@ -35,12 +35,13 @@ class ApplicationCreate(ApplicationBase):
 class ApplicationResponse(ApplicationBase):
     id: int
     user_name: Optional[str] = None
+    project: Optional[str] = None  # Add project field
 
     class Config:
         orm_mode = True
 
 @router.get("/applications", response_model=List[ApplicationResponse])
-def get_applications(month: Optional[str] = None, db: Session = Depends(get_db)):
+def get_applications(month: Optional[str] = None, project: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Application)
 
     if month:
@@ -61,6 +62,9 @@ def get_applications(month: Optional[str] = None, db: Session = Depends(get_db))
             )
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM")
+            
+    if project:
+        query = query.join(User).filter(User.project == project)
 
     applications = query.all()
 
@@ -73,7 +77,8 @@ def get_applications(month: Optional[str] = None, db: Session = Depends(get_db))
             "target_product": app.target_product,
             "status": app.status,
             "user_id": app.user_id,
-            "user_name": user.name if user else None
+            "user_name": user.name if user else None,
+            "project": user.project if user else None  # Add project field
         }
         result.append(app_dict)
 
