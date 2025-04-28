@@ -39,6 +39,9 @@ class ApplicationResponse(ApplicationBase):
 
     class Config:
         orm_mode = True
+        
+class InheritApplicationsRequest(BaseModel):
+    current_month: str
 
 @router.get("/applications", response_model=List[ApplicationResponse])
 def get_applications(month: Optional[str] = None, project: Optional[str] = None, db: Session = Depends(get_db)):
@@ -131,40 +134,75 @@ def delete_application(application_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Application deleted successfully"}
 
+
 @router.post("/applications/inherit-previous-month", response_model=List[ApplicationResponse])
 def inherit_previous_month_applications(
-    current_month: str,
+    request: InheritApplicationsRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(check_admin_permission)
 ):
-    year_str, month_str = current_month.split('-')
+    year_str, month_str = request.current_month.split('-')
     year = int(year_str)
     month_num = int(month_str)
-    
+
     if month_num == 1:
         prev_month_num = 12
         prev_year = year - 1
     else:
         prev_month_num = month_num - 1
         prev_year = year
-    
+
     prev_month = f"{prev_year}-{str(prev_month_num).zfill(2)}"
+
+    query = db.query(Application)
     
-    prev_applications = get_applications(prev_month, db)
+    try:
+        year_str, month_str = prev_month.split('-')
+        year = int(year_str)
+        month_num = int(month_str)
+        start_date = date(year, month_num, 1)
+
+        if month_num == 12:
+            end_date = date(year + 1, 1, 1)
+        else:
+            end_date = date(year, month_num + 1, 1)
+
+        query = query.filter(
+            Application.application_date >= start_date,
+            Application.application_date < end_date
+        )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid month format. Use YYYY-MM")
     
-    new_applications = []
+    prev_applications = query.all()
+    
+    formatted_prev_applications = []
     for app in prev_applications:
+        user = db.query(User).filter(User.id == app.user_id).first()
+        app_dict = {
+            "id": app.id,
+            "application_date": app.application_date,
+            "target_product": app.target_product,
+            "status": app.status,
+            "user_id": app.user_id,
+            "user_name": user.name if user else None,
+            "project": user.project if user else None
+        }
+        formatted_prev_applications.append(app_dict)
+
+    new_applications = []
+    for app in formatted_prev_applications:
         new_app = Application(
             application_date=date(year, month_num, 1),
-            target_product=app.target_product,
+            target_product=app["target_product"],
             status=ApplicationStatus.PENDING,
-            user_id=app.user_id
+            user_id=app["user_id"]
         )
         db.add(new_app)
         new_applications.append(new_app)
-    
+
     db.commit()
-    
+
     result = []
     for app in new_applications:
         db.refresh(app)
@@ -179,5 +217,5 @@ def inherit_previous_month_applications(
             "project": user.project if user else None  # Include project field
         }
         result.append(app_dict)
-    
+
     return result
