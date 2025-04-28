@@ -1,0 +1,52 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - 'backend/user_application_api/**'
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/user_application_api/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend/user_application_api
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+      
+      - name: Configure Poetry
+        run: poetry config virtualenvs.in-project true
+      
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: ./backend/user_application_api/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+      
+      - name: Install dependencies
+        run: poetry install
+      
+      - name: Lint with flake8
+        run: poetry run flake8
+      
+      - name: Format check with black
+        run: poetry run black --check .
+      
+      - name: Import sorting check with isort
+        run: poetry run isort --check .

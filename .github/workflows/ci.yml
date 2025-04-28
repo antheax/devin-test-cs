@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify repository structure
+        run: |
+          if [ ! -d "frontend/user_application_ui" ]; then
+            echo "Frontend directory not found!"
+            exit 1
+          fi
+          if [ ! -d "backend/user_application_api" ]; then
+            echo "Backend directory not found!"
+            exit 1
+          fi
