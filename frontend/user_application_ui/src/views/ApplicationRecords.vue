@@ -25,6 +25,10 @@
       </div>
       
       <div class="actions">
+        <button 
+          v-if="currentUser && (currentUser.user_type === '超级管理员' || currentUser.user_type === '项目管理员')"
+          class="btn btn-secondary" 
+          @click="inheritPreviousMonth">继承上月用户名单</button>
         <button class="btn btn-primary" @click="showAddApplicationForm = true">新建申请</button>
       </div>
     </div>
@@ -310,6 +314,24 @@ export default {
         } catch (error) {
           console.error('Error deleting application:', error);
           alert('删除申请失败: ' + (error.response?.data?.detail || error.message));
+        }
+      }
+    },
+    async inheritPreviousMonth() {
+      if (confirm('确定要从上个月继承用户名单吗？所有继承的记录状态将设置为"申请中"。')) {
+        try {
+          await axios.post(`http://localhost:8000/applications/inherit-previous-month`, 
+            { current_month: this.selectedMonth },
+            {
+              headers: {
+                'user-id': this.currentUser ? this.currentUser.id : undefined
+              }
+            }
+          );
+          this.fetchApplications();
+        } catch (error) {
+          console.error('Error inheriting applications:', error);
+          alert('继承上月用户名单失败: ' + (error.response?.data?.detail || error.message));
         }
       }
     }

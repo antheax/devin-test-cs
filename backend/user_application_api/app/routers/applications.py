@@ -130,3 +130,54 @@ def delete_application(application_id: int, db: Session = Depends(get_db)):
     db.delete(db_application)
     db.commit()
     return {"message": "Application deleted successfully"}
+
+@router.post("/applications/inherit-previous-month", response_model=List[ApplicationResponse])
+def inherit_previous_month_applications(
+    current_month: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(check_admin_permission)
+):
+    year_str, month_str = current_month.split('-')
+    year = int(year_str)
+    month_num = int(month_str)
+    
+    if month_num == 1:
+        prev_month_num = 12
+        prev_year = year - 1
+    else:
+        prev_month_num = month_num - 1
+        prev_year = year
+    
+    prev_month = f"{prev_year}-{str(prev_month_num).zfill(2)}"
+    
+    prev_applications = get_applications(prev_month, db)
+    
+    new_applications = []
+    for app in prev_applications:
+        new_app = Application(
+            application_date=date(year, month_num, 1),
+            target_product=app.target_product,
+            status=ApplicationStatus.PENDING,
+            user_id=app.user_id
+        )
+        db.add(new_app)
+        new_applications.append(new_app)
+    
+    db.commit()
+    
+    result = []
+    for app in new_applications:
+        db.refresh(app)
+        user = db.query(User).filter(User.id == app.user_id).first()
+        app_dict = {
+            "id": app.id,
+            "application_date": app.application_date,
+            "target_product": app.target_product,
+            "status": app.status,
+            "user_id": app.user_id,
+            "user_name": user.name if user else None,
+            "project": user.project if user else None  # Include project field
+        }
+        result.append(app_dict)
+    
+    return result
